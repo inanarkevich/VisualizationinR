@@ -1,0 +1,909 @@
+---
+title: "Advanced R visualization"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    #runtime: shiny
+---
+
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(ggplot2)
+library(funModeling)#plot_num
+library(corrplot)
+library(dplyr)
+library(purrr)
+library(ggpubr) #ggarrange
+library(lubridate)#MOnth
+library(highcharter)
+library(ggridges)#geom_density_ridges_gradient
+library(viridis)#scale_viridis
+library(gridExtra)#grid.arrange
+library(forcats)#fct_rev
+library(readxl)
+library(leaflet)
+library(xts)
+library(dygraphs)
+library(tidyverse)
+library(quantmod)
+library(RColorBrewer)
+library(plotly)
+library(clifro)
+#library(hrbrthemes)
+```
+
+```{r}
+setwd("/Users/kasia/Desktop/projekt")
+rain<-read.csv("weatherAUS.csv", sep=",", dec=",", header=TRUE) 
+rain <- subset(rain, select = -c(RISK_MM))
+```
+
+Introduction {data-icon="star"}
+=============================
+
+Row {}
+-----------------------------------------------------------------------
+
+### Correlation plot description {.no-title}
+
+<h2><font color="#3b5998">Weather in Australia</font></h2>
+
+<br><b>Katarzyna Majcher, Ina Narkevich</b>
+
+The dataset was taken from Kaggle: https://www.kaggle.com/jsphyg/weather-dataset-rattle-package 
+
+
+This dataset contains daily weather observations from numerous Australian weather stations. 
+Variables:
+<br>. <b>Date</b> The date of observation 
+<br>. <b>Location</b> The common name of the location of the weather station 
+<br>. <b>MinTemp</b> The minimum temperature in degrees celsius 
+<br>. <b>MaxTemp</b> The maximum temperature in degrees celsius 
+<br>. <b>Rainfall</b> The amount of rainfall recorded for the day in mm 
+<br>. <b>Evaporation</b> The so-called Class A pan evaporation (mm) in the 24 hours to 9am 
+<br>. <b>Sunshine</b> The number of hours of bright sunshine in the day. 
+<br>. <b>WindGustDir</b> The direction of the strongest wind gust in the 24 hours to midnight 
+<br>. <b>WindGustSpeed</b> The speed (km/h) of the strongest wind gust in the 24 hours to midnight 
+<br>. <b>WindDir9am</b> Direction of the wind at 9am 
+<br>. <b>WindDir3pm</b> Direction of the wind at 3pm 
+<br>. <b>WindSpeed9am</b> Wind speed (km/hr) averaged over 10 minutes prior to 9am 
+<br>. <b>WindSpeed3pm</b> Wind speed (km/hr) averaged over 10 minutes prior to 3pm 
+<br>. <b>Humidity9am</b> Humidity (percent) at 9am 
+<br>. <b>Humidity3pm</b> Humidity (percent) at 3pm 
+<br>. <b>Pressure9am</b> Atmospheric pressure (hpa) reduced to mean sea level at 9am 
+<br>. <b>Pressure3pm</b> Atmospheric pressure (hpa) reduced to mean sea level at 3pm 
+<br>. <b>Cloud9am</b> Fraction of sky obscured by cloud at 9am. This is measured in “oktas”, which are a unit of eigths. It records how many eigths of the sky are obscured by cloud. A 0 measure indicates completely clear sky whilst an 8 indicates that it is completely overcast.
+<br>. <b>Cloud3pm</b> Fraction of sky obscured by cloud (in “oktas”: eighths) at 3pm. See Cload9am for a description of the values 
+<br>. <b>Temp9am</b> Temperature (degrees C) at 9am 
+<br>. <b>Temp3pm</b> Temperature (degrees C) at 3pm 
+<br>. <b>RainToday</b> Boolean: 1 if precipitation (mm) in the 24 hours to 9am exceeds 1mm, otherwise 0 
+<br>. <b>RISK_MM</b> The amount of next day rain in mm. Used to create response variable 
+<br>. <b>RainTomorrow</b> A kind of measure of the “risk”.
+
+<br>We visualized different weather characteristics of weather in Sydney in order to figure out, when it will be the best time for visiting it.
+
+<br><b>Note:</b> during the presentation we showed the interactive version to get better insights from dataset by applying filters (by Cities, Year) using Shiny functionality. In order to have static version of the report, we switched off all dynamic elements.
+
+
+
+
+Basic EDA {data-icon="fa-umbrella"}
+=============================
+
+```{r}
+#Change the type of variables into numeric
+col_num = c(3,4,5,6,7,16,17,20,21)    
+rain[,col_num] = apply(rain[,col_num], 2, function(x) as.numeric(as.character(x)))
+#Changing format of data 
+rain$Date <- as.Date(rain$Date, 
+                      format = "%Y-%m-%d")
+```
+
+```{r}
+rain$Month <- month(rain$Date)
+rain$Year <- year(rain$Date)
+rain$Month <- as.factor(rain$Month)
+rain$Year <- as.factor(rain$Year)
+```
+
+
+
+
+
+
+
+
+Column {data-height=700}
+-----------------------------------------------------------------------
+
+### Correlation plot
+
+```{r}
+ #define continuous and categorical 
+continuous_var <- rain %>% keep(is.numeric)
+
+cor.data <- cor(continuous_var, use="pairwise.complete.obs") 
+corrplot.mixed(cor.data, tl.pos = "lt",tl.col = 'black', number.cex=0.55)
+```
+
+### Distribution of numeric variables
+
+```{r}
+continuous_var <- rain %>% keep(is.numeric)
+plot_num(continuous_var)
+```
+
+
+
+
+Row {}
+-----------------------------------------------------------------------
+
+### Correlation plot description {.no-title}
+
+<font size="4">There is <b>strong relationship</b> between the following variables: Temp3pm and MaxTemp (0.98), Temp3pm and MaxTemp (0.98),Temp9am and MinTemp (0.9), Temp9am and MaxTemp(0.89), Pressure3pm and Pressure9am (0.96), Temp3pm and Temp9am (0.86), MaxTemp and MinTemp (0.74).<br>There is <b>moderate positive relationship</b> between the following variables: MaxTemp and Exaporation (0.59), MaxTemp and Sunshine (0.47).<br>There is <b>moderate negative relationship</b> between the following variables: Humidity and Sunshine (-0.63), Humidity and Evaporation (-0.51), Sunshine and Cloud (-0.7).</font>
+
+
+### Distribution of numeric variables description {.no-title}
+
+<font size="4">From the plot above, we see, that such variables as MinTemp, MaxTemp, Humidity3pm, Pressure9am, Pressure3am, Temp9am, Temp3pm are <b>normally distributed</b>. 
+<br>The histograms of Rainfall, Evaporation variables distribution are very heavily <b>right-skewed</b>. 
+<br>The distribution of WindGustSpeed, WindSpeed9am, WindSpeed3pm variables is <b>right-skewed</b>. 
+<br>The distribution of Sunshine, Humidity9am is <b>left-skewed</b>.</font>
+
+
+
+
+
+
+
+Column {data-height=700}
+-----------------------------------------------------------------------
+
+### Relation between categorical variables and probability of raining
+
+
+```{r}
+min_temp<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=MinTemp))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+max_temp<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=MaxTemp))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+rain_fall<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Rainfall))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+evaporation<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Evaporation))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+sunshine<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Sunshine))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+wind_gust_speed<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=WindGustSpeed))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+wind_speed9<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=WindSpeed9am))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+wind_speed3<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=WindSpeed3pm))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+humidity9<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Humidity9am))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+humidity3<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Humidity3pm))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+pressure9<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Pressure9am))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+pressure3<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Pressure3pm))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+cloud9<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Cloud9am))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+cloud3<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Cloud3pm))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+temp9<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Temp9am))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+temp3<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Temp3pm))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+ggarrange(min_temp,max_temp,rain_fall,evaporation,sunshine,wind_gust_speed,wind_speed9,wind_speed3,humidity9,humidity3,pressure9,pressure3,cloud9, cloud3,temp9,temp3)
+```
+
+### Relation between categorical variables and probability of raining
+
+```{r}
+m_sunshine<-  ggplot(data=rain, aes(Month, Sunshine, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+m_evaporation<-  ggplot(data=rain,aes(Month, Evaporation, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+m_windgustspeed<-  ggplot(data=rain,aes(Month, WindGustSpeed, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+m_windspeed9am<-  ggplot(data=rain,aes(Month, WindSpeed9am, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+m_humidity9am<-  ggplot(data=rain,aes(Month, Humidity9am, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+m_pressure9am<-  ggplot(data=rain,aes(Month, Pressure9am, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+m_cloud9am<-  ggplot(data=rain,aes(Month, Cloud9am, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+m_temp9am<-  ggplot(data=rain,aes(Month, Temp9am, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+ggarrange(m_sunshine,m_evaporation,m_windgustspeed,m_windspeed9am,m_humidity9am,m_pressure9am,m_cloud9am,m_temp9am)
+```
+
+Row {}
+-----------------------------------------------------------------------
+
+### Correlation plot description {.no-title}
+
+<font size="4">We can see, that there is quite a significant difference in Sunshine, WindGustSpeed, Humidity9am, Humidity3pm, Cloud9am, Cloud3pm variables depending on Rain Tomorrow variable.<br>The <b>higher level of Sunshine</b>, <b>the lower probability of having a rain</b> tomorrow. <br><b>The higher level of Humidity and Cloud</b> - <b>the higher probability of having a rain</b> tomorrow.</font>
+
+
+### Distribution of numeric variables description {.no-title}
+
+<font size="4">We can observe, that the <b>lowest mean Temperature and Sunshine</b> is observed <b>June and July</b>, while the <b>highest</b> - in <b>December and January</b>. <br>In addition, we can see that the <b>highest Humidity and Pressure</b> in <b>June and July</b>, while <b>the lowest</b> - in <b>January and December</b>.<br>The levels of Evaporation, the speed of wind, and share of cloudy sky are almost the same during the year.</font>
+
+
+
+Temperature {data-icon="fa-thermometer"}
+=============================
+
+
+```{r}
+rain_select<-filter(rain, Year != 2007 & Year != 2008 & Year != 2017)
+
+cities <- as.character(sort(unique(rain_select$Location)))
+years <- as.character(sort(unique(rain_select$Year)))
+
+# selectInput("cities_input", label = "Select City:",
+#                choices = cities , selected = "Adelaide")
+
+```
+
+```{r}
+# selectInput("year_input", label = "Select Year:",
+#                choices = years, selected = "2016")
+```
+
+Column {data-height=500}
+-----------------------------------------------------------------------
+
+### Temperature during the year (Sydney, 2016)
+
+```{r}
+#renderHighchart({
+    rain_f = filter(rain, Location == "Sydney")
+  rain_f = filter(rain_f, Year == '2016')
+  rain_f <- rain_f[c('Date', 'MaxTemp', 'MinTemp')]
+  rain_f$MeanTemp <-  (rain_f$MaxTemp+rain_f$MinTemp)/2
+  
+  x <- c("Min", "Mean", "Max")
+  y <- sprintf("{point.%s}", c("MinTemp", "MeanTemp", "MaxTemp"))
+  tltip <- tooltip_table(x, y)
+
+  hchart(rain_f, type = "columnrange",
+       hcaes(x = Date, low = MinTemp, high = MaxTemp,
+             color = MeanTemp)) %>%
+  hc_chart(polar = TRUE) %>%
+  hc_yAxis( max = 40, min = 0, labels = list(format = "{value} C"),
+            showFirstLabel = FALSE) %>%
+  hc_xAxis(
+    title = list(text = ""), gridLineWidth = 0.5,
+    labels = list(format = "{value: %b}")) %>%
+  hc_tooltip(useHTML = TRUE, pointFormat = tltip,
+             headerFormat = as.character(tags$small("{point.x:%d %B, %Y}")))
+
+#})
+
+```
+
+### The distribution max and min temperature by months in Australia
+
+```{r}
+p1 <- rain %>%
+  ggplot(aes(x = MaxTemp, y = fct_rev(Month), fill = ..x..)) +
+  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01, gradient_lwd = 1., bandwidth = 1.4) +
+  #scale_fill_viridis(name = "T_max [?C]", option = "C") +
+  scale_fill_continuous(low = "#EAF353", high = "#F6AA68") +
+  ggtitle("Max temperature by months") +
+  labs(x = "Maximum temperature", y = "") +
+  theme_ridges(font_size = 13, grid = TRUE) +
+  theme(legend.position = "none") +
+  theme(axis.title.y = element_blank())
+
+p2 <- rain %>%
+ ggplot(aes(x = MinTemp, y =fct_rev(Month), fill = ..x..)) +
+ geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01, gradient_lwd = 1., bandwidth = 4) +
+ scale_fill_continuous(low = "#8370EE", high = "#4E6587") +
+ ggtitle("Min temperature by months") +
+labs(x = "Minimum temperature", y = "", fill = "Humidity") +
+ theme_ridges(font_size = 13, grid = TRUE) +
+ theme(legend.position = "none") +
+ theme(axis.title.y = element_blank())
+
+grid.arrange(p1,p2, ncol = 2, nrow = 1)
+
+```
+
+Row {}
+-----------------------------------------------------------------------
+
+### Temperature during the year description {.no-title}
+
+<font size="4">This graph displays the detailed information about the Temperature: Mean Temperature,  Maximum Temperature, Minimum Temperature in Sydney in 2016 by hovering around the corresponding date. Color indicates the the mean temperature: yellow - the highest mean temperature,  violet - the lowest mean temperature.<br>For example, in Sydney in 2016 <b>the hottest months</b> were <b>January, February, March</b>, when Mean Temperature during the day was about 20-25, Maximum temperature could reach 30 degrees; <b>the coldest months</b> were <b>July and August</b>, when Mean Temperature during the day was about 13-16, Manimum temperature could reach 7 degrees.<br>At other months during the year Mean Temperature was around 18-23 degrees.</font> 
+
+
+### The distribution max and min temperature by months description {.no-title}
+
+<font size="4">We can observe, that in whole Australia the lowest mean  <b>Maximum and Minimum Temperature</b> is observed June and July, while <b>the highest</b> - in <b>December and January</b>.</font>
+
+
+Column {}
+-----------------------------------------------------------------------
+### Temperature at 9am and 3pm in Sydney
+
+```{r}
+#renderDygraph({
+  #rain_f = filter(rain, Location == input$cities_input)
+  rain1 = filter(rain, Location == "Sydney")
+  temp <- cbind(rain1$Temp9am, rain1$Temp3pm)
+  colnames(temp) <- c("9am", "3pm")
+  m.xts <- xts(temp, order.by=rain1$Date)
+
+  dygraph(m.xts, main = "Temperature") %>%
+  dyOptions(colors = c("#3399FF", "#00008b"))%>%
+  dySeries("3pm", axis = "y2") %>%
+  dyAxis(name = "y",
+         label = "Temperature at 9am",
+         axisLabelFontSize = 10) %>%
+  dyAxis(name = "y2",
+         label = "Temperature at 3pm",
+         axisLabelFontSize = 10) %>%
+  dyRangeSelector(dateWindow = c("2008-02-17", "2017-06-15"),
+                   fillColor = "#3399FF")#}) 
+```
+
+Column {}
+-----------------------------------------------------------------------
+
+### Temperature at 9am and 3pm description {.no-title}
+
+<font size="4">We can observe detailed information about temperature.
+Dygraph above shows values of temperature at 9am and 3pm for each day in selected city (Sydney) across available period of time. (2008-2017).<br>As we can see, in Sydney during the whole year in average temperature in the morning is lower than at 3 p.m.</font>
+
+
+
+
+Column {}
+-----------------------------------------------------------------------
+
+Sunshine {data-icon="fa-sun"}
+=============================
+
+Row
+-----------------------------------------------------------------------
+
+### The average number of hours of bright sunshine in the day.
+
+```{r}
+articles <- round(mean(rain$Sunshine, na.rm = TRUE),1)
+valueBox(articles, icon = "fa-calendar", color = "#99CCFF")
+```
+
+### The sunniest city.
+
+```{r}
+rain_sun<-rain %>%
+  group_by(Location) %>%
+  summarise(mean=mean(Sunshine, na.rm = T)) %>% as.data.frame()
+
+sunniest_city<-rain_sun[which.max(rain_sun$mean),]$Location
+
+valueBox(sunniest_city, icon = "fa-sun", color = "#66B2FF")
+```
+
+### The least sunny city.
+
+```{r}
+darkest_city<-rain_sun[which.min(rain_sun$mean),]$Location
+valueBox(darkest_city, 
+         icon = "fa-cloud",
+         color = "#3399ff")
+```
+
+
+Row {}
+-----------------------------------------------------------------------
+
+### Sunshine across cities 
+```{r}
+city<-read_xlsx("cities.xlsx")
+
+
+mean_sunshine<-rain %>%
+
+  group_by(Location) %>%
+  summarise(mean=mean(Sunshine, na.rm = T)) %>% as.data.frame()
+
+total_list <- merge(mean_sunshine, city, by="Location")
+```
+
+```{r}
+pal <- colorNumeric(
+  palette = "YlGnBu",
+  domain = total_list$mean
+)
+
+
+qpal <- colorQuantile("YlOrRd", total_list$mean, n = 7)
+
+leaflet(total_list) %>%
+ addTiles() %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addScaleBar() %>%
+  addCircleMarkers(~Longitude, ~Latitude, group = "Location",
+                   color=~pal(mean), fillOpacity = 0.8, popup = ~as.character(Location), label = ~as.character(Location))%>%
+  leaflet::addLegend("bottomright", pal = pal, values = ~mean,title = "Sunshine",opacity = 0.9, labFormat = labelFormat())
+```
+
+Row{}
+-----------------------------------------------------------------------
+
+### Temperature at 9am and 3pm description {.no-title}
+<font size="4">We can observe, that the <b>highest number of hours of sunshine</b> during the day in the central part of Australia: <b>AliceSprings city</b>.<br>The cities with <b>the lowest number of hours of sunshine</b> are mainly located in the southern part of Australia, for example: <b>Hobart, Portland</b>.</font>
+
+
+
+
+Rain {data-icon="fa-tint"}
+=============================
+
+
+```{r}
+#Data preparation
+rain<-as.data.frame(rain)
+count_sunshine<-rain %>%
+  group_by(Month, Location, RainToday, Year) %>% 
+  count(Rainy_days_per_month =n(), na.rm = T) %>% filter(RainToday =="Yes") %>% as.data.frame()
+
+mean_sunshine<-rain %>%
+  group_by(Location,Month) %>%
+  summarise(mean_sun=mean(Sunshine, na.rm = T)) %>% as.data.frame()
+
+```
+
+```{r}
+# cities2 <- as.character(sort(unique(na.omit(mean_sunshine)$Location)))
+# selectInput("cities_input2", label = "Select City:",
+#                choices = cities2, selected = "Adelaide")
+
+```
+
+```{r}
+# selectInput("year_input2", label = "Select Year:",
+#                choices = years, selected = "2008")
+```
+
+Column {}
+-----------------------------------------------------------------------
+
+### The amount of rainy days and sunshine by city and year (Sydney, 2016)
+```{r}
+#renderPlotly({
+  
+  total<-merge(mean_sunshine,count_sunshine,by=c("Location", "Month")) %>% na.omit() %>%
+  filter(Location =="Sydney" & Year == '2016')%>%
+  mutate(Rainy_days_per_month=round(Rainy_days_per_month,1)) %>%
+  mutate(mean_sun=round(mean_sun,1)) %>%
+  # prepare text for tooltip
+  mutate(text = paste("City: ", Location, "\nSunshine: ", mean_sun, "\nRainy days: ", Rainy_days_per_month))
+  
+  plot <-
+  #make a plot
+  ggplot(total, aes(x=Month, y=Rainy_days_per_month, size = mean_sun,text=text)) +
+  geom_point(alpha=0.5, color="#335DFF" ) +
+  scale_size(range = c(3, 8), name="Average amount of\nsunshine per day") +
+  ggtitle("The amount of rainy days and sunshine in Sydney in 2016")+
+  #scale_color_viridis(discrete=TRUE, guide=FALSE) +
+ # theme_ipsum() +
+  theme(legend.position = 'bottom')+
+  guides(shape = guide_legend(override.aes = list(size = 10)))
+
+
+# turn ggplot interactive with plotly
+pp <- ggplotly(plot, tooltip="text")%>%
+layout(legend = list(orientation = "h", x = -0.5, y =-1))
+pp
+#})
+
+```
+
+Row {}
+-----------------------------------------------------------------------
+### About dygraphs{.no-title}
+<font size="4">The graph shows number of rainy days per month in Sydney in 2016. 
+<br>There is no clear trend of ditribution of rainy days by months.
+<br><b>The biggest number of rainy days</b> was in <b>January and March</b> and <b>the lowest number</b> - in <b>May and November</b>.</font>
+
+
+Pressure {data-icon="fa-tachometer-alt"}
+=============================
+
+Row {}
+-----------------------------------------------------------------------
+### About dygraphs{.no-title}
+<font size="4">In Australia, the seasons are defined by grouping the calendar months in the following way:</font>
+
+<br><b>Spring</b> - the three transition months September, October and November.
+<br><b>Summer</b> - the three hottest months December, January and February.
+<br><b>Autumn</b> - the transition months March, April and May.
+<br><b>Winter</b> - the three coldest months June, July and August.
+
+```{r}
+### Creating seasons
+rain5<-rain
+rain5$Season <- NA
+rain5$Season[rain5$Month == 9 | rain5$Month == 10 | rain5$Month == 11 ] <- 'Spring'
+rain5$Season[rain5$Month == 12 | rain5$Month == 1 | rain5$Month == 2 ] <- 'Summer'
+rain5$Season[rain5$Month == 3 | rain5$Month == 4 | rain5$Month == 5 ] <- 'Autumn'
+rain5$Season[rain5$Month == 6 | rain5$Month == 7 | rain5$Month == 8 ] <- 'Winter'
+rain5$Season <- as.factor(rain5$Season)
+
+#Count mean of pressure by seasons
+mean_preassure <- aggregate(rain5$Pressure9am, by=list(Season=rain5$Season), FUN=mean, na.rm = T)
+```
+
+Column {data-height=350}
+-----------------------------------------------------------------------
+### Pressure(hpa) in autumn (9am)
+
+```{r}
+#1st plot autumn
+plot_ly(
+  domain = list(x = c(0, 1), y = c(0, 1)),
+  value = mean_preassure[1,2],
+  title = list(text = mean_preassure[1,1]),
+  type = "indicator",
+  mode = "gauge+number",
+  gauge = list(
+    axis = list(range = list(800, 1200), tickwidth = 1, tickcolor = "darkblue"),
+    bar = list(color = "darkblue"),
+    bgcolor = "white",
+    borderwidth = 2,
+    bordercolor = "gray",
+    steps = list(
+      list(range = c(800, 900), color = "99CCFF"),
+      list(range = c(900, 1000), color = "66B2FF"),
+      list(range = c(1000,1100), color = "3399FF"),
+      list(range = c(1100,1200), color = "0080FF")))) %>%
+  layout(
+    margin = list(l=20,r=30),
+    font = list(color = "darkblue", family = "Arial"))
+
+```
+
+### Pressure(hpa) in spring (9am)
+
+```{r}
+
+#2st plot spring
+plot_ly(
+  domain = list(x = c(0, 1), y = c(0, 1)),
+  value = mean_preassure[2,2],
+  title = list(text = mean_preassure[2,1]),
+  type = "indicator",
+  mode = "gauge+number",
+  gauge = list(
+    axis = list(range = list(800, 1200), tickwidth = 1, tickcolor = "darkblue"),
+    bar = list(color = "darkblue"),
+    bgcolor = "white",
+    borderwidth = 2,
+    bordercolor = "gray",
+    steps = list(
+      list(range = c(800, 900), color = "99CCFF"),
+      list(range = c(900, 1000), color = "66B2FF"),
+      list(range = c(1000,1100), color = "3399FF"),
+      list(range = c(1100,1200), color = "0080FF")))) %>%
+  layout(
+    margin = list(l=20,r=30),
+    font = list(color = "darkblue", family = "Arial"))
+
+
+```
+
+### Pressure(hpa) in summer (9am)
+
+```{r}
+
+#3st plot summer
+plot_ly(
+  domain = list(x = c(0, 1), y = c(0, 1)),
+  value = mean_preassure[3,2],
+  title = list(text = mean_preassure[3,1]),
+  type = "indicator",
+  mode = "gauge+number",
+  gauge = list(
+    axis = list(range = list(800, 1200), tickwidth = 1, tickcolor = "darkblue"),
+    bar = list(color = "darkblue"),
+    bgcolor = "white",
+    borderwidth = 2,
+    bordercolor = "gray",
+    steps = list(
+      list(range = c(800, 900), color = "99CCFF"),
+      list(range = c(900, 1000), color = "66B2FF"),
+      list(range = c(1000,1100), color = "3399FF"),
+      list(range = c(1100,1200), color = "0080FF")))) %>%
+  layout(
+    margin = list(l=20,r=30),
+    font = list(color = "darkblue", family = "Arial"))
+
+```
+
+### Pressure(hpa) in winter (9am)
+
+```{r}
+
+#4st plot winter 
+plot_ly(
+  
+  domain = list(x = c(0, 1), y = c(0, 1)),
+  value = mean_preassure[4,2],
+  title = list(text = mean_preassure[4,1]),
+  type = "indicator",
+  mode = "gauge+number",
+  gauge = list(
+    axis = list(range = list(800, 1200), tickwidth = 1, tickcolor = "darkblue"),
+    bar = list(color = "darkblue"),
+    bgcolor = "white",
+    borderwidth = 2,
+    bordercolor = "gray",
+    steps = list(
+      list(range = c(800, 900), color = "99CCFF"),
+      list(range = c(900, 1000), color = "66B2FF"),
+      list(range = c(1000,1100), color = "3399FF"),
+      list(range = c(1100,1200), color = "0080FF")))) %>%
+  layout(
+    margin = list(l=20,r=30),
+    font = list(color = "darkblue", family = "Arial"))
+
+
+```
+
+
+Row {}
+-----------------------------------------------------------------------
+### About dygraphs{.no-title}
+<font size="4">A gauge is a very common chart used in information dashboards. A gauge chart can be used when you want to show a single value within a given scale.
+<br>A gauge charts above inform about mean value of pressure at 9am from whole Austalia in different seasons. </font>
+
+
+
+Column {}
+-----------------------------------------------------------------------
+
+### Pressure in Sydney
+
+```{r}
+
+#renderDygraph({
+  rain1 = filter(rain, Location == "Sydney")
+  pressure <- cbind(rain1$Pressure9am, rain1$Pressure3pm)
+  colnames(pressure) <- c("9am", "3pm")
+  m.xts <- xts(pressure, order.by=rain1$Date)
+
+  dygraph(m.xts, main = "Pressure") %>%
+  dyOptions(colors = c("#3399FF", "#00008b"))%>%
+  dySeries("3pm", axis = "y2") %>%
+  dyAxis(name = "y",
+         label = "Pressure at 9am",
+         axisLabelFontSize = 10) %>%
+  dyAxis(name = "y2",
+         label = "Pressure at 3pm",
+         axisLabelFontSize = 10) %>%
+  dyRangeSelector(dateWindow = c("2008-02-17", "2017-06-15"),
+                   fillColor = "#3399FF")
+  #}) 
+```
+
+Row {}
+-----------------------------------------------------------------------
+### About dygraphs{.no-title}
+
+<font size="4">Dygraph allows users to explore and interpret dense data sets.
+<br>By using dygraph we can find more detail information about pressure.
+Dygraph above shows pressure at 9am and 3pm for each day in Sydney across available period of time. (2008-2017)</font>
+
+
+Wind {data-icon="fa-compass"}
+=============================
+
+
+Column {}
+-----------------------------------------------------------------------
+
+### Wind at 9am (Sydney)
+
+```{r Wind Rose}
+
+#renderPlot({
+  
+  rain3 = filter(rain, Location == "Sydney")
+  
+  rain3$newWind = rain3$WindDir9am
+  
+  rain3$newWind<-as.numeric(rain3$newWind)
+  
+  rain3$newWind[rain3$newWind == 1 ] <- 90 
+  rain3$newWind[rain3$newWind == 4] <- 0
+  rain3$newWind[rain3$newWind == 2] <- 67.5
+  rain3$newWind[rain3$newWind == 3] <- 112.5
+  rain3$newWind[rain3$newWind == 5] <- 45
+  rain3$newWind[rain3$newWind == 6] <- 22.5
+  rain3$newWind[rain3$newWind == 7] <- 337.5
+  rain3$newWind[rain3$newWind == 8] <- 315
+  rain3$newWind[rain3$newWind == 9] <- 180
+  rain3$newWind[rain3$newWind == 10] <- 135
+  rain3$newWind[rain3$newWind == 11] <- 157.5
+  rain3$newWind[rain3$newWind == 12] <- 202.5
+  rain3$newWind[rain3$newWind == 13] <- 225
+  rain3$newWind[rain3$newWind == 14] <- 270
+  rain3$newWind[rain3$newWind == 15] <- 292.5
+  rain3$newWind[rain3$newWind == 16] <- 247.5
+  
+
+  Wind_at9am<- windrose(speed = rain3$WindSpeed9am,
+         direction =rain3$newWind,
+         speed_cuts = seq(0,25,5),
+         ggtheme='grey',
+         calm_wind = 0, 
+         variable_wind = 990,
+         legend_title = "Wind Speed\n(km/hr)",
+         col_pal = "YlOrBr")
+
+  Wind_at9am
+#})
+
+```
+
+### Wind at 3pm (Sydney)
+```{r}
+
+#renderPlot({
+  
+rain3 = filter(rain, Location == 'Sydney')
+rain3$newWind2 = rain3$WindDir3pm
+rain3$newWind2<-as.numeric(rain3$newWind2)
+
+rain3$newWind2[rain3$newWind2 == 1 ] <- 90 
+rain3$newWind2[rain3$newWind2 == 4] <- 0
+rain3$newWind2[rain3$newWind2 == 2] <- 67.5
+rain3$newWind2[rain3$newWind2 == 3] <- 112.5
+rain3$newWind2[rain3$newWind2 == 5] <- 45
+rain3$newWind2[rain3$newWind2 == 6] <- 22.5
+rain3$newWind2[rain3$newWind2 == 7] <- 337.5
+rain3$newWind2[rain3$newWind2 == 8] <- 315
+rain3$newWind2[rain3$newWind2 == 9] <- 180
+rain3$newWind2[rain3$newWind2 == 10] <- 135
+rain3$newWind2[rain3$newWind2 == 11] <- 157.5
+rain3$newWind2[rain3$newWind2 == 12] <- 202.5
+rain3$newWind2[rain3$newWind2 == 13] <- 225
+rain3$newWind2[rain3$newWind2 == 14] <- 270
+rain3$newWind2[rain3$newWind2 == 15] <- 292.5
+rain3$newWind2[rain3$newWind2 == 16] <- 247.5
+
+Wind_at3pm<- windrose(speed = rain3$WindSpeed3pm,
+         direction =rain3$newWind2,
+         speed_cuts = seq(0,25,5),
+         ggtheme='grey',
+         calm_wind = 0, 
+         variable_wind = 990,
+         legend_title = "Wind Speed\n(km/hr)",
+         col_pal = "YlOrBr") 
+
+Wind_at3pm
+#})
+```
+
+Row {}
+-----------------------------------------------------------------------
+### About dygraphs{.no-title}
+<font size="4">The wind rose shows the general wind direction and speed. The circular format of the wind rose shows the direction the winds blew from and the length of each "spoke" around the circle shows how often the wind blew from that direction. 
+<br>The different colors of each spoke provide details on the speed of the wind from each direction. 
+<br>Using the example above, the longest spoke shows that, <b>in Sydney at 9 am, </b> the wind blew from the west <b>at speeds between 15-20 km/hr </b>(light orange) <b> about 13% of the time, 10-15 km/hr</b> (intensive yellow) <b> about 11% of the time and 5-10 km/hr </b>(light yellow) <b>about 5% of the time.</b>
+<br>Overall, the wind rose above shows that during this particular sampling period <b> wind blew from west 35% of the time.</b></font>
+
+
+
+Humidity {data-icon="fa-cloud"}
+=============================
+
+
+Column {data-height=500}
+-----------------------------------------------------------------------
+
+### Humidity vs Rain vs Temperature (Sydney)
+
+```{r}
+#barplot(1:10, col = wes_palette("Zissou1", 10, type = "continuous"))
+
+rain6 <- rain
+library(ggpubr)
+#renderPlot({
+  rain6 = filter(rain, Location == "Sydney")
+  ggscatterhist(
+  rain6, x = "Humidity3pm", y = "Temp3pm",
+  color = "RainTomorrow", size = 3, alpha = 1,
+  palette = c("darkblue", "#3399FF"),
+  margin.params = list(fill = "RainTomorrow", color = "black", size = 0.2)
+  )
+#})
+
+```
+
+Row {}
+-----------------------------------------------------------------------
+### About ggscatterhist{.no-title}
+<font size="4">Scatterplots are useful for interpreting trends in statistical data. Each observation (or point) in a scatterplot has two coordinates. The first corresponds to the first piece of data in the pair - Humidity at 3pm. The second coordinate corresponds to the second piece of data in the pair Temperature at 3pm. The point representing that observation is placed at the intersection of the two coordinates. Additionally, colors of dot indicate whether on the next day for observation rain had fallen.
+<br>A density plot is a representation of the distribution of a numeric variable which allow to see how the Humidity and Temperature are distributed between rainy and not rainy days. 
+<br>In case of Sydney, we can observe a <b>clear correlation between Humidity and occurance of rain.</b> <b> The higher humidity the higher probability of rain on the next day.</b> However, there is no visible correlation between Temperature and Rain.</font>
+
+Column {data-height=500}
+-----------------------------------------------------------------------
+
+### Humidity (Sydney)
+
+```{r}
+#renderDygraph({
+  #rain1 = filter(rain, Location == "Sydney")
+  rain5 = filter(rain, Location == "Sydney")
+  pressure <- cbind(rain5$Humidity9am, rain5$Humidity3pm)
+  colnames(pressure) <- c("9am", "3pm")
+  
+  m.xts <- xts(pressure, order.by=rain5$Date)
+  #index(m.xts)
+  
+  dygraph(m.xts, main = "Humidity") %>%
+  dyOptions(colors = c("#3399FF", "#00008b"))%>%
+  dySeries("3pm", axis = "y2") %>%
+  dyAxis(name = "y",
+         label = "Humidity",
+         axisLabelFontSize = 10) %>%
+  dyRangeSelector(dateWindow = c("2008-02-17", "2017-06-15"),
+                   fillColor = "#3399FF")
+#  }) 
+```
+
+Row {}
+-----------------------------------------------------------------------
+### About dygraphs{.no-title}
+<font size="4">By using dygraph we can find more detail information about humidity.
+Dygraph above shows values of humidity at 9am and 3pm for each day in selected city across available period of time. (2008-2017)</font>
+
+
+Conclusion {}
+=============================
+
+<br><b>What is the best time to visit Sydney, Australia?</b>
+
+<br><b>Best Time to Visit Sydney:</b> October, November, late February and March. 
+<br>These months generally offer sunny weather, while avoiding the heat of mid-summer.
+<br><b>Best Time for Good Weather: </b> Late October to early April.
+<br><b>Best Time for Sightseeing:</b> October, November, March, and April. Avoiding the heat of mid-summer, the best time is late spring (October and November) and early autumn (March and April). This also avoids the humidity, which can be draining at times, and the rain, which can be disruptive from April to September.
+<br><b>Best Time for Outdoor Activities:</b> Surfing and swimming in summer (December to February), but anything else, e.g. hiking, late spring (October and November) or early autumn (March and April). The heat and humidity can be difficult during the summer (December to February) for anything like hiking.  To avoid the heat, humidity, hordes and hail, head outside in late spring (October and November) and early autumn (March and April).
+<br><b>Best Time for Beaches:</b> The delightful Manly Beach, and those to the east, including iconic Bondi, are worth visiting any time of the year for walking, shopping, and admiring the views. But for swimming, surfing, and sunbathing, the best times are from late spring (November) to early autumn (March), but always be careful of the burning sun and scary waves.
+
+
+<br><b>Sydney Travel Seasons</b>
+
+<br><b>High Season (December to early February):</b> During this time, the weather is always hot, and the humidity can even drive the locals inside. Nevertheless, many Sydneysiders and tourists – Australian and foreign – head to the beaches and various sporting events at this time. Rates for hotels are always higher, even more so around Christmas/New Year, when schools are shut, and many offices and business also close.
+<br><b>Shoulder Season: (mid-February to end of May, and September to November):</b> This is the best time to visit because the crowds are less (it’s out of the school holiday period), hotel rates are lower, and the weather is usually still ideal for sightseeing, with crisp days, cool nights, and infrequent rain.
+<br><b>Low Season: (June, July and August):</b> Winter can be cold and wet, although heavy rain in summer is not uncommon, and winter days can often be sunny and dry. Prices for hotels are at their lowest, except for the mid-year school holiday period (around mid-July), and during major sporting events.
+

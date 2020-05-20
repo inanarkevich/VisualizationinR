@@ -1,0 +1,765 @@
+---
+title: "Advanced R visualization"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    runtime: shiny
+---
+
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(ggplot2)
+library(funModeling)#plot_num
+library(corrplot)
+library(dplyr)
+library(purrr)
+library(ggpubr) #ggarrange
+library(lubridate)#MOnth
+library(highcharter)
+library(ggridges)#geom_density_ridges_gradient
+library(viridis)#scale_viridis
+library(gridExtra)#grid.arrange
+library(forcats)#fct_rev
+library(readxl)
+library(leaflet)
+library(xts)
+library(dygraphs)
+library(tidyverse)
+library(quantmod)
+library(RColorBrewer)
+library(plotly)
+library(clifro)
+library(hrbrthemes)
+```
+
+```{r}
+setwd("C:\\Users\\User\\Google Drive (i.narkevich@student.uw.edu.pl)\\Master degree II year\\Advanced Visualisation in R\\visualizationR")
+rain<-read.csv("weatherAUS.csv", sep=",", dec=",", header=TRUE) 
+rain <- subset(rain, select = -c(RISK_MM))
+```
+
+Basic EDA {data-icon="fa-umbrella"}
+=============================
+
+```{r}
+#Change the type of variables into numeric
+col_num = c(3,4,5,6,7,16,17,20,21)    
+rain[,col_num] = apply(rain[,col_num], 2, function(x) as.numeric(as.character(x)))
+#Changing format of data 
+rain$Date <- as.Date(rain$Date, 
+                      format = "%Y-%m-%d")
+```
+
+```{r}
+rain$Month <- month(rain$Date)
+rain$Year <- year(rain$Date)
+rain$Month <- as.factor(rain$Month)
+rain$Year <- as.factor(rain$Year)
+```
+
+
+
+
+
+
+
+
+Column {data-height=700}
+-----------------------------------------------------------------------
+
+### Correlation plot
+
+```{r}
+ #define continuous and categorical 
+continuous_var <- rain %>% keep(is.numeric)
+
+cor.data <- cor(continuous_var, use="pairwise.complete.obs") 
+corrplot.mixed(cor.data, tl.pos = "lt",tl.col = 'black', number.cex=0.55)
+```
+
+### Distribution of numeric variables
+
+```{r}
+continuous_var <- rain %>% keep(is.numeric)
+plot_num(continuous_var)
+```
+
+
+
+Column {data-height=700}
+-----------------------------------------------------------------------
+
+### Relation between categorical variables and probability of raining
+
+
+```{r}
+min_temp<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=MinTemp))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+max_temp<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=MaxTemp))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+rain_fall<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Rainfall))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+evaporation<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Evaporation))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+sunshine<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Sunshine))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+wind_gust_speed<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=WindGustSpeed))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+wind_speed9<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=WindSpeed9am))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+wind_speed3<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=WindSpeed3pm))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+humidity9<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Humidity9am))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+humidity3<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Humidity3pm))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+pressure9<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Pressure9am))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+pressure3<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Pressure3pm))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+cloud9<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Cloud9am))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+cloud3<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Cloud3pm))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+temp9<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Temp9am))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+temp3<-ggplot(data=rain, aes(x=factor(RainTomorrow), y=Temp3pm))+
+        geom_boxplot(col='#66B2FF') + labs(x='Rain Tomorrow')
+ggarrange(min_temp,max_temp,rain_fall,evaporation,sunshine,wind_gust_speed,wind_speed9,wind_speed3,humidity9,humidity3,pressure9,pressure3,cloud9, cloud3,temp9,temp3)
+```
+
+### Relation between categorical variables and probability of raining
+
+```{r}
+m_sunshine<-  ggplot(data=rain, aes(Month, Sunshine, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+m_evaporation<-  ggplot(data=rain,aes(Month, Evaporation, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+m_windgustspeed<-  ggplot(data=rain,aes(Month, WindGustSpeed, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+m_windspeed9am<-  ggplot(data=rain,aes(Month, WindSpeed9am, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+m_humidity9am<-  ggplot(data=rain,aes(Month, Humidity9am, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+m_pressure9am<-  ggplot(data=rain,aes(Month, Pressure9am, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+m_cloud9am<-  ggplot(data=rain,aes(Month, Cloud9am, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+m_temp9am<-  ggplot(data=rain,aes(Month, Temp9am, fill = Month)) +
+  geom_boxplot() +
+  theme(legend.position = "none")
+
+ggarrange(m_sunshine,m_evaporation,m_windgustspeed,m_windspeed9am,m_humidity9am,m_pressure9am,m_cloud9am,m_temp9am)
+```
+
+
+
+
+
+Temperature {data-icon="fa-thermometer"}
+=============================
+
+Column {data-height=100}
+-----------------------------------------------------------------------
+```{r}
+rain_select<-filter(rain, Year != 2007 & Year != 2008 & Year != 2017)
+
+cities <- as.character(sort(unique(rain_select$Location)))
+years <- as.character(sort(unique(rain_select$Year)))
+
+selectInput("cities_input", label = "Select City:",
+               choices = cities , selected = "Adelaide")
+
+```
+
+```{r}
+selectInput("year_input", label = "Select Year:",
+               choices = years, selected = "2016")
+```
+
+Column {data-height=500}
+-----------------------------------------------------------------------
+
+### Temperature during the year
+
+```{r}
+renderHighchart({
+    rain_f = filter(rain, Location == input$cities_input)#"Adelaide")
+  rain_f = filter(rain_f, Year == input$year_input)
+  rain_f <- rain_f[c('Date', 'MaxTemp', 'MinTemp')]
+  rain_f$MeanTemp <-  (rain_f$MaxTemp+rain_f$MinTemp)/2
+  
+  x <- c("Min", "Mean", "Max")
+  y <- sprintf("{point.%s}", c("MinTemp", "MeanTemp", "MaxTemp"))
+  tltip <- tooltip_table(x, y)
+
+  hchart(rain_f, type = "columnrange",
+       hcaes(x = Date, low = MinTemp, high = MaxTemp,
+             color = MeanTemp)) %>%
+  hc_chart(polar = TRUE) %>%
+  hc_yAxis( max = 40, min = 0, labels = list(format = "{value} C"),
+            showFirstLabel = FALSE) %>%
+  hc_xAxis(
+    title = list(text = ""), gridLineWidth = 0.5,
+    labels = list(format = "{value: %b}")) %>%
+  hc_tooltip(useHTML = TRUE, pointFormat = tltip,
+             headerFormat = as.character(tags$small("{point.x:%d %B, %Y}")))
+
+})
+
+```
+
+### The distribution max and min temperature by months
+
+```{r}
+p1 <- rain %>%
+  ggplot(aes(x = MaxTemp, y = fct_rev(Month), fill = ..x..)) +
+  geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01, gradient_lwd = 1., bandwidth = 1.4) +
+  #scale_fill_viridis(name = "T_max [?C]", option = "C") +
+  scale_fill_continuous(low = "#EAF353", high = "#F6AA68") +
+  ggtitle("Max temperature by months") +
+  labs(x = "Maximum temperature", y = "") +
+  theme_ridges(font_size = 13, grid = TRUE) +
+  theme(legend.position = "none") +
+  theme(axis.title.y = element_blank())
+
+p2 <- rain %>%
+ ggplot(aes(x = MinTemp, y =fct_rev(Month), fill = ..x..)) +
+ geom_density_ridges_gradient(scale = 3, rel_min_height = 0.01, gradient_lwd = 1., bandwidth = 4) +
+ scale_fill_continuous(low = "#8370EE", high = "#4E6587") +
+ ggtitle("Min temperature by months") +
+labs(x = "Minimum temperature", y = "", fill = "Humidity") +
+ theme_ridges(font_size = 13, grid = TRUE) +
+ theme(legend.position = "none") +
+ theme(axis.title.y = element_blank())
+
+grid.arrange(p1,p2, ncol = 2, nrow = 1)
+
+```
+
+
+
+
+Column {}
+-----------------------------------------------------------------------
+### Temperature at 9am and 3pm
+
+```{r}
+renderDygraph({
+  #rain_f = filter(rain, Location == input$cities_input)
+  rain1 = filter(rain, Location == input$cities_input)
+  temp <- cbind(rain1$Temp9am, rain1$Temp3pm)
+  colnames(temp) <- c("9am", "3pm")
+  m.xts <- xts(temp, order.by=rain1$Date)
+
+  dygraph(m.xts, main = "Temperature") %>%
+  dyOptions(colors = c("#3399FF", "#00008b"))%>%
+  dySeries("3pm", axis = "y2") %>%
+  dyAxis(name = "y",
+         label = "Temperature at 9am",
+         axisLabelFontSize = 10) %>%
+  dyAxis(name = "y2",
+         label = "Temperature at 3pm",
+         axisLabelFontSize = 10) %>%
+  dyRangeSelector(dateWindow = c("2008-02-17", "2017-06-15"),
+                   fillColor = "#3399FF")}) 
+```
+
+
+
+
+
+Sunshine {data-icon="fa-sun"}
+=============================
+
+Row
+-----------------------------------------------------------------------
+
+### The average number of hours of bright sunshine in the day.
+
+```{r}
+articles <- round(mean(rain$Sunshine, na.rm = TRUE),1)
+valueBox(articles, icon = "fa-calendar", color = "#99CCFF")
+```
+
+### The sunniest city.
+
+```{r}
+rain_sun<-rain %>%
+  group_by(Location) %>%
+  summarise(mean=mean(Sunshine, na.rm = T)) %>% as.data.frame()
+
+sunniest_city<-rain_sun[which.max(rain_sun$mean),]$Location
+
+valueBox(sunniest_city, icon = "fa-sun", color = "#66B2FF")
+```
+
+### The least sunny city.
+
+```{r}
+darkest_city<-rain_sun[which.min(rain_sun$mean),]$Location
+valueBox(darkest_city, 
+         icon = "fa-cloud",
+         color = "#3399ff")
+```
+
+
+Row {}
+-----------------------------------------------------------------------
+
+### Sunshine across cities 
+```{r}
+city<-read_xlsx("cities.xlsx")
+
+
+mean_sunshine<-rain %>%
+
+  group_by(Location) %>%
+  summarise(mean=mean(Sunshine, na.rm = T)) %>% as.data.frame()
+
+total_list <- merge(mean_sunshine, city, by="Location")
+```
+
+```{r}
+pal <- colorNumeric(
+  palette = "YlGnBu",
+  domain = total_list$mean
+)
+
+
+qpal <- colorQuantile("YlOrRd", total_list$mean, n = 7)
+
+leaflet(total_list) %>%
+ addTiles() %>%
+  addProviderTiles("CartoDB.Positron") %>%
+  addScaleBar() %>%
+  addCircleMarkers(~Longitude, ~Latitude, group = "Location",
+                   color=~pal(mean), fillOpacity = 0.8, popup = ~as.character(Location), label = ~as.character(Location))%>%
+  leaflet::addLegend("bottomright", pal = pal, values = ~mean,title = "Sunshine",opacity = 0.9, labFormat = labelFormat())
+```
+
+
+
+
+
+
+Rain {data-icon="fa-tint"}
+=============================
+
+Column {data-height=100}
+-----------------------------------------------------------------------
+
+```{r}
+#Data preparation
+rain<-as.data.frame(rain)
+count_sunshine<-rain %>%
+  group_by(Month, Location, RainToday, Year) %>% 
+  count(Rainy_days_per_month =n(), na.rm = T) %>% filter(RainToday =="Yes") %>% as.data.frame()
+
+mean_sunshine<-rain %>%
+  group_by(Location,Month) %>%
+  summarise(mean_sun=mean(Sunshine, na.rm = T)) %>% as.data.frame()
+
+```
+
+```{r}
+cities2 <- as.character(sort(unique(na.omit(mean_sunshine)$Location)))
+selectInput("cities_input2", label = "Select City:",
+               choices = cities2, selected = "Adelaide")
+
+```
+
+```{r}
+selectInput("year_input2", label = "Select Year:",
+               choices = years, selected = "2008")
+```
+
+Column {}
+-----------------------------------------------------------------------
+
+### Bubble plot
+```{r}
+renderPlotly({
+  
+  total<-merge(mean_sunshine,count_sunshine,by=c("Location", "Month")) %>% na.omit() %>%
+  filter(Location ==input$cities_input2 & Year == input$year_input2)%>%
+  mutate(Rainy_days_per_month=round(Rainy_days_per_month,1)) %>%
+  mutate(mean_sun=round(mean_sun,1)) %>%
+  # prepare text for tooltip
+  mutate(text = paste("City: ", Location, "\nSunshine: ", mean_sun, "\nRainy days: ", Rainy_days_per_month))
+  
+  plot <-
+  #make a plot
+  ggplot(total, aes(x=Month, y=Rainy_days_per_month, size = mean_sun,text=text)) +
+  geom_point(alpha=0.5, color="#335DFF" ) +
+  scale_size(range = c(3, 8), name="Average amount of\nsunshine per day") +
+  ggtitle("The amount of rainy days and sunshine by city and year")+
+  #scale_color_viridis(discrete=TRUE, guide=FALSE) +
+ # theme_ipsum() +
+  theme(legend.position = 'bottom')+
+  guides(shape = guide_legend(override.aes = list(size = 10)))
+
+
+# turn ggplot interactive with plotly
+pp <- ggplotly(plot, tooltip="text")%>%
+layout(legend = list(orientation = "h", x = -0.5, y =-1))
+pp
+})
+
+```
+
+
+
+
+Pressure {data-icon="fa-tachometer-alt"}
+=============================
+
+
+
+```{r}
+### Creating seasons
+rain5<-rain
+rain5$Season <- NA
+rain5$Season[rain5$Month == 9 | rain5$Month == 10 | rain5$Month == 11 ] <- 'Spring'
+rain5$Season[rain5$Month == 12 | rain5$Month == 1 | rain5$Month == 2 ] <- 'Summer'
+rain5$Season[rain5$Month == 3 | rain5$Month == 4 | rain5$Month == 5 ] <- 'Autumn'
+rain5$Season[rain5$Month == 6 | rain5$Month == 7 | rain5$Month == 8 ] <- 'Winter'
+rain5$Season <- as.factor(rain5$Season)
+
+#Count mean of pressure by seasons
+mean_preassure <- aggregate(rain5$Pressure9am, by=list(Season=rain5$Season), FUN=mean, na.rm = T)
+```
+
+Column {data-height=350}
+-----------------------------------------------------------------------
+### Pressure(hpa) in autumn (9am)
+
+```{r}
+#1st plot autumn
+plot_ly(
+  domain = list(x = c(0, 1), y = c(0, 1)),
+  value = mean_preassure[1,2],
+  title = list(text = mean_preassure[1,1]),
+  type = "indicator",
+  mode = "gauge+number",
+  gauge = list(
+    axis = list(range = list(800, 1200), tickwidth = 1, tickcolor = "darkblue"),
+    bar = list(color = "darkblue"),
+    bgcolor = "white",
+    borderwidth = 2,
+    bordercolor = "gray",
+    steps = list(
+      list(range = c(800, 900), color = "99CCFF"),
+      list(range = c(900, 1000), color = "66B2FF"),
+      list(range = c(1000,1100), color = "3399FF"),
+      list(range = c(1100,1200), color = "0080FF")))) %>%
+  layout(
+    margin = list(l=20,r=30),
+    font = list(color = "darkblue", family = "Arial"))
+
+```
+
+### Pressure(hpa) in spring (9am)
+
+```{r}
+
+#2st plot spring
+plot_ly(
+  domain = list(x = c(0, 1), y = c(0, 1)),
+  value = mean_preassure[2,2],
+  title = list(text = mean_preassure[2,1]),
+  type = "indicator",
+  mode = "gauge+number",
+  gauge = list(
+    axis = list(range = list(800, 1200), tickwidth = 1, tickcolor = "darkblue"),
+    bar = list(color = "darkblue"),
+    bgcolor = "white",
+    borderwidth = 2,
+    bordercolor = "gray",
+    steps = list(
+      list(range = c(800, 900), color = "99CCFF"),
+      list(range = c(900, 1000), color = "66B2FF"),
+      list(range = c(1000,1100), color = "3399FF"),
+      list(range = c(1100,1200), color = "0080FF")))) %>%
+  layout(
+    margin = list(l=20,r=30),
+    font = list(color = "darkblue", family = "Arial"))
+
+
+```
+
+### Pressure(hpa) in summer (9am)
+
+```{r}
+
+#3st plot summer
+plot_ly(
+  domain = list(x = c(0, 1), y = c(0, 1)),
+  value = mean_preassure[3,2],
+  title = list(text = mean_preassure[3,1]),
+  type = "indicator",
+  mode = "gauge+number",
+  gauge = list(
+    axis = list(range = list(800, 1200), tickwidth = 1, tickcolor = "darkblue"),
+    bar = list(color = "darkblue"),
+    bgcolor = "white",
+    borderwidth = 2,
+    bordercolor = "gray",
+    steps = list(
+      list(range = c(800, 900), color = "99CCFF"),
+      list(range = c(900, 1000), color = "66B2FF"),
+      list(range = c(1000,1100), color = "3399FF"),
+      list(range = c(1100,1200), color = "0080FF")))) %>%
+  layout(
+    margin = list(l=20,r=30),
+    font = list(color = "darkblue", family = "Arial"))
+
+```
+
+### Pressure(hpa) in winter (9am)
+
+```{r}
+
+#4st plot winter 
+plot_ly(
+  
+  domain = list(x = c(0, 1), y = c(0, 1)),
+  value = mean_preassure[4,2],
+  title = list(text = mean_preassure[4,1]),
+  type = "indicator",
+  mode = "gauge+number",
+  gauge = list(
+    axis = list(range = list(800, 1200), tickwidth = 1, tickcolor = "darkblue"),
+    bar = list(color = "darkblue"),
+    bgcolor = "white",
+    borderwidth = 2,
+    bordercolor = "gray",
+    steps = list(
+      list(range = c(800, 900), color = "99CCFF"),
+      list(range = c(900, 1000), color = "66B2FF"),
+      list(range = c(1000,1100), color = "3399FF"),
+      list(range = c(1100,1200), color = "0080FF")))) %>%
+  layout(
+    margin = list(l=20,r=30),
+    font = list(color = "darkblue", family = "Arial"))
+
+
+```
+
+
+
+
+Column {data-height=100}
+-----------------------------------------------------------------------
+```{r}
+selectInput("cities_input1", label = "Select City:",
+               choices = cities , selected = "Adelaide")
+```
+
+
+Column {}
+-----------------------------------------------------------------------
+
+### Pressure 
+
+```{r}
+
+renderDygraph({
+  rain1 = filter(rain, Location == input$cities_input1)
+  pressure <- cbind(rain1$Pressure9am, rain1$Pressure3pm)
+  colnames(pressure) <- c("9am", "3pm")
+  m.xts <- xts(pressure, order.by=rain1$Date)
+
+  dygraph(m.xts, main = "Pressure") %>%
+  dyOptions(colors = c("#3399FF", "#00008b"))%>%
+  dySeries("3pm", axis = "y2") %>%
+  dyAxis(name = "y",
+         label = "Pressure at 9am",
+         axisLabelFontSize = 10) %>%
+  dyAxis(name = "y2",
+         label = "Pressure at 3pm",
+         axisLabelFontSize = 10) %>%
+  dyRangeSelector(dateWindow = c("2008-02-17", "2017-06-15"),
+                   fillColor = "#3399FF")
+  }) 
+```
+
+
+
+
+Wind {data-icon="fa-compass"}
+=============================
+
+Column {data-height=100}
+-----------------------------------------------------------------------
+```{r}
+selectInput("cities_input3", label = "Select City:",
+               choices = cities , selected = "Adelaide")
+```
+
+
+Column {}
+-----------------------------------------------------------------------
+
+### Wind at 9am
+
+```{r Wind Rose}
+
+renderPlot({
+  
+  rain3 = filter(rain, Location == input$cities_input3)
+  
+  rain3$newWind = rain3$WindDir9am
+  
+  rain3$newWind<-as.numeric(rain3$newWind)
+  
+  rain3$newWind[rain3$newWind == 1 ] <- 90 
+  rain3$newWind[rain3$newWind == 4] <- 0
+  rain3$newWind[rain3$newWind == 2] <- 67.5
+  rain3$newWind[rain3$newWind == 3] <- 112.5
+  rain3$newWind[rain3$newWind == 5] <- 45
+  rain3$newWind[rain3$newWind == 6] <- 22.5
+  rain3$newWind[rain3$newWind == 7] <- 337.5
+  rain3$newWind[rain3$newWind == 8] <- 315
+  rain3$newWind[rain3$newWind == 9] <- 180
+  rain3$newWind[rain3$newWind == 10] <- 135
+  rain3$newWind[rain3$newWind == 11] <- 157.5
+  rain3$newWind[rain3$newWind == 12] <- 202.5
+  rain3$newWind[rain3$newWind == 13] <- 225
+  rain3$newWind[rain3$newWind == 14] <- 270
+  rain3$newWind[rain3$newWind == 15] <- 292.5
+  rain3$newWind[rain3$newWind == 16] <- 247.5
+  
+
+  Wind_at9am<- windrose(speed = rain3$WindSpeed9am,
+         direction =rain3$newWind,
+         speed_cuts = seq(0,25,5),
+         ggtheme='grey',
+         calm_wind = 0, 
+         variable_wind = 990,
+         legend_title = "Wind Speed\n(km/hr)",
+         col_pal = "YlOrBr")
+
+  Wind_at9am
+})
+
+```
+
+### Wind at 3pm
+```{r}
+
+renderPlot({
+  
+rain3 = filter(rain, Location == input$cities_input3)
+rain3$newWind2 = rain3$WindDir3pm
+rain3$newWind2<-as.numeric(rain3$newWind2)
+
+rain3$newWind2[rain3$newWind2 == 1 ] <- 90 
+rain3$newWind2[rain3$newWind2 == 4] <- 0
+rain3$newWind2[rain3$newWind2 == 2] <- 67.5
+rain3$newWind2[rain3$newWind2 == 3] <- 112.5
+rain3$newWind2[rain3$newWind2 == 5] <- 45
+rain3$newWind2[rain3$newWind2 == 6] <- 22.5
+rain3$newWind2[rain3$newWind2 == 7] <- 337.5
+rain3$newWind2[rain3$newWind2 == 8] <- 315
+rain3$newWind2[rain3$newWind2 == 9] <- 180
+rain3$newWind2[rain3$newWind2 == 10] <- 135
+rain3$newWind2[rain3$newWind2 == 11] <- 157.5
+rain3$newWind2[rain3$newWind2 == 12] <- 202.5
+rain3$newWind2[rain3$newWind2 == 13] <- 225
+rain3$newWind2[rain3$newWind2 == 14] <- 270
+rain3$newWind2[rain3$newWind2 == 15] <- 292.5
+rain3$newWind2[rain3$newWind2 == 16] <- 247.5
+
+Wind_at3pm<- windrose(speed = rain3$WindSpeed3pm,
+         direction =rain3$newWind2,
+         speed_cuts = seq(0,25,5),
+         ggtheme='grey',
+         calm_wind = 0, 
+         variable_wind = 990,
+         legend_title = "Wind Speed\n(km/hr)",
+         col_pal = "YlOrBr") 
+
+Wind_at3pm
+})
+```
+
+
+
+Humidity {data-icon="fa-cloud"}
+=============================
+
+
+Column {data-height=100}
+-----------------------------------------------------------------------
+```{r}
+selectInput("cities_input4", label = "Select City:",
+               choices = cities , selected = "Adelaide")
+```
+
+Column {data-height=500}
+-----------------------------------------------------------------------
+
+### Humidity
+
+```{r}
+#barplot(1:10, col = wes_palette("Zissou1", 10, type = "continuous"))
+
+rain6 <- rain
+library(ggpubr)
+renderPlot({
+  rain6 = filter(rain, Location == input$cities_input4)
+  ggscatterhist(
+  rain6, x = "Humidity3pm", y = "Temp3pm",
+  color = "RainTomorrow", size = 3, alpha = 1,
+  palette = c("darkblue", "#3399FF"),
+  margin.params = list(fill = "RainTomorrow", color = "black", size = 0.2)
+  )
+})
+
+```
+
+
+
+Column {data-height=500}
+-----------------------------------------------------------------------
+
+### Humidity
+
+```{r}
+renderDygraph({
+  rain1 = filter(rain, Location == "Sydney")
+  rain5 = filter(rain, Location == input$cities_input4)
+  pressure <- cbind(rain5$Humidity9am, rain5$Humidity3pm)
+  colnames(pressure) <- c("9am", "3pm")
+  
+  m.xts <- xts(pressure, order.by=rain5$Date)
+  index(m.xts)
+  
+  dygraph(m.xts, main = "Humidity") %>%
+  dyOptions(colors = c("#3399FF", "#00008b"))%>%
+  dySeries("3pm", axis = "y2") %>%
+  dyAxis(name = "y",
+         label = "Humidity",
+         axisLabelFontSize = 10) %>%
+  dyRangeSelector(dateWindow = c("2008-02-17", "2017-06-15"),
+                   fillColor = "#3399FF")
+  }) 
+```
+
